@@ -262,3 +262,184 @@ plt.show()
 
 #-------------------------------------------------------分界线--------------------------------------------------------
 
+import geopandas as gpd
+import numpy as np
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon, MultiPolygon
+import cartopy.crs as ccrs
+
+# 读取北京54坐标系下的中国版图数据
+data = gpd.read_file('world.shp')
+
+# 墨卡托投影参数
+lon_0 = 0  # 中心经线
+lat_0 = 0  # 中心纬线
+
+def mercator_conversion(lon, lat):
+    valid_lat = np.clip(lat, -85, 85)  # 限制纬度范围在[-85°, 85°]
+    # 将经纬度转换为弧度
+    lat_rad = np.radians(valid_lat)
+    lon_rad = np.radians(lon)
+    lon_0_rad = np.radians(lon_0)
+
+    # 计算坐标
+    x = lon_rad - lon_0_rad
+    y = np.log(np.tan(np.pi / 4 + lat_rad / 2))
+
+    return x, y
+
+# 转换数据的坐标
+new_coords = []
+for geom in data.geometry:
+    new_geom_coords = []
+    if geom.geom_type == 'Polygon':
+        for point in geom.exterior.coords:
+            lon, lat = point
+            x, y = mercator_conversion(lon, lat)
+            new_geom_coords.append((x, y))
+        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+    elif geom.geom_type == 'MultiPolygon':
+        for poly in geom.geoms:
+            new_poly_coords = []
+            for point in poly.exterior.coords:
+                lon, lat = point
+                x, y = mercator_conversion(lon, lat)
+                new_poly_coords.append((x, y))
+            new_geom_coords.append(new_poly_coords)
+        new_coords.append(new_geom_coords)
+
+# 创建新的GeoDataFrame
+new_geometries = []
+for coords in new_coords:
+    if isinstance(coords[0][0], (list, tuple)) and all(isinstance(c, (list, tuple)) for c in coords[0]):
+        new_geometries.append(MultiPolygon([Polygon(c) for c in coords]))
+    else:
+        new_geometries.append(Polygon(coords[0]))
+
+new_data = gpd.GeoDataFrame(data.drop('geometry', axis=1), geometry=new_geometries)
+
+# 绘制转换后的地图
+# 创建墨卡托投影对象，用于后续绘图时设置坐标系
+proj = ccrs.Mercator()
+fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={'projection': proj})
+new_data.plot(ax=ax, transform=ccrs.PlateCarree())  # 设置数据的原始坐标系为PlateCarree（经纬度坐标系）
+
+# 添加经纬网格绘制，设置每隔5度绘制一条线
+gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
+                  linewidth=0.5, color='gray', alpha=0.5, linestyle='--')
+gl.xlocator = plt.FixedLocator(np.arange(-180, 180 + 5, 5))  # 设置经度刻度位置
+gl.ylocator = plt.FixedLocator(np.arange(-90, 90 + 5, 5))  # 设置纬度刻度位置
+gl.top_labels = False  # 关闭顶部的经纬度标签（可根据需求选择是否显示）
+gl.right_labels = False  # 关闭右侧的经纬度标签（可根据需求选择是否显示）
+
+plt.title('World Mercator Projection')
+plt.xlabel('X Coordinate')
+plt.ylabel('Y Coordinate')
+
+plt.show()
+
+#-------------------------------------------------------分界线--------------------------------------------------------
+
+import geopandas as gpd
+import numpy as np
+import matplotlib.pyplot as plt
+from shapely.geometry import Polygon, MultiPolygon
+import cartopy.crs as ccrs
+import math
+
+# 读取北京54坐标系下的世界版图数据
+data = gpd.read_file('world.shp')
+
+# 墨卡托投影参数
+lon_0 = 0  # 中心经线
+lat_0 = 0  # 中心纬线
+
+def mercator_conversion(lon, lat):
+    # 将经纬度转换为弧度
+    lat_rad = np.radians(lat)
+    lon_rad = np.radians(lon)
+    lon_0_rad = np.radians(lon_0)
+
+    # 计算坐标
+    x = lon_rad - lon_0_rad
+    y = np.log(np.tan(np.pi / 4 + lat_rad / 2))
+
+    return x, y
+
+# 转换数据的坐标
+new_coords = []
+for geom in data.geometry:
+    new_geom_coords = []
+    if geom.geom_type == 'Polygon':
+        for point in geom.exterior.coords:
+            lon, lat = point
+            x, y = mercator_conversion(lon, lat)
+            new_geom_coords.append((x, y))
+        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+    elif geom.geom_type == 'MultiPolygon':
+        for poly in geom.geoms:
+            new_poly_coords = []
+            for point in poly.exterior.coords:
+                lon, lat = point
+                x, y = mercator_conversion(lon, lat)
+                new_poly_coords.append((x, y))
+            new_geom_coords.append(new_poly_coords)
+        new_coords.append(new_geom_coords)
+
+# 创建新的 GeoDataFrame
+new_geometries = []
+for coords in new_coords:
+    if isinstance(coords[0][0], (list, tuple)) and all(isinstance(c, (list, tuple)) for c in coords[0]):
+        new_geometries.append(MultiPolygon([Polygon(c) for c in coords]))
+    else:
+        new_geometries.append(Polygon(coords[0]))
+
+new_data = gpd.GeoDataFrame(data.drop('geometry', axis=1), geometry=new_geometries)
+
+# 定义北京和巴黎的经纬度（示例经纬度，可根据实际更精确的坐标调整）
+beijing_lat = 39.9333  # 北纬39°56′，转换为小数形式
+beijing_lon = 116.3833  # 东经116°20′，转换为小数形式
+paris_lat = 48.85  # 北纬48°51′，转换为小数形式
+paris_lon = 2.3333  # 东经2°20′，转换为小数形式
+
+# 将经纬度转换为弧度
+beijing_lat_rad = np.radians(beijing_lat)
+beijing_lon_rad = np.radians(beijing_lon)
+paris_lat_rad = np.radians(paris_lat)
+paris_lon_rad = np.radians(paris_lon)
+
+# 计算大圆航线（基于球面三角学原理）
+# 计算两点间的夹角（角距离）
+sigma = np.arccos(np.sin(beijing_lat_rad) * np.sin(paris_lat_rad) +
+                  np.cos(beijing_lat_rad) * np.cos(paris_lat_rad) * np.cos(paris_lon_rad - beijing_lon_rad))
+
+# 设定路径点数量（这里取100个点，可根据需要调整）
+num_points = 100
+path_points = []
+for i in range(num_points):
+    fraction = i / (num_points - 1)
+    A = np.sin((1 - fraction) * sigma) / np.sin(sigma)
+    B = np.sin(fraction * sigma) / np.sin(sigma)
+    x = A * np.cos(beijing_lat_rad) * np.cos(beijing_lon_rad) + B * np.cos(paris_lat_rad) * np.cos(paris_lon_rad)
+    y = A * np.cos(beijing_lat_rad) * np.sin(beijing_lon_rad) + B * np.cos(paris_lat_rad) * np.sin(paris_lon_rad)
+    z = A * np.sin(beijing_lat_rad) + B * np.sin(paris_lat_rad)
+    lon = np.arctan2(y, x)
+    lat = np.arctan2(z, np.sqrt(x ** 2 + y ** 2))
+    path_points.append((np.degrees(lon), np.degrees(lat)))
+
+# 转换大圆航线路径点的坐标到墨卡托投影坐标系
+path_points_projected = [mercator_conversion(lon, lat) for lon, lat in path_points]
+
+# 绘制转换后的地图
+fig, ax = plt.subplots(figsize=(10, 10))
+new_data.plot(ax=ax)
+
+# 绘制大圆航线
+x_path, y_path = zip(*path_points_projected)
+ax.plot(x_path, y_path, color='red', linewidth=2)
+
+plt.title('World Mercator Projection with Great Circle Route from Beijing to Paris')
+plt.xlabel('X Coordinate')
+plt.ylabel('Y Coordinate')
+
+plt.show()
