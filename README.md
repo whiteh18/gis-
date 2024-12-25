@@ -21,7 +21,7 @@
 大致格式可参考**name.geojson**<br>
 建议访问 https://geojson.cn/docs/ref/geojson 等相关说明格式的网站<br>
 4 但是通过观察发现老师的geojson文件中的坐标是经纬度坐标，而我自己编码的只是简单的平面直角坐标系下的坐标数据，于是我就想将这个坐标变换为类似经纬度坐标，参考了下一章的内容，用了变换矩阵处理了一下原始geojson文件中的坐标，生成了新的geojson文件。<br>
-新的geojson文件中，中文就乱码了，我暂时还不知道怎么改，不过对实验影响不大<br>
+新的geojson文件**my_name_tra.geojson**中，中文就乱码了，我暂时还不知道怎么改，不过对实验影响不大<br>
 参考文件**lat_lon.py**<br>
 5 使用ipyleaflet库在家乡地图上显示姓名<br>
 借助天地图，需要密钥<br>
