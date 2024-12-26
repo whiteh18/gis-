@@ -1,6 +1,4 @@
 import geojson
-import numpy as np
-#这次没用numpy，但是下一章创建变换矩阵用了
 
 with open('name.geojson','r',encoding = 'utf-8') as file:
     geojson_content = file.read()
@@ -63,6 +61,7 @@ print(min_y_3)
 #同理第三个字
 
 #上面三步我应该是写复杂了，可能因为当时是边探索数据边写的T_T
+#可以直接将三者结合起来
 
 
 Sx = (115.5 - 115.3) / (max_x - min_x_1)
