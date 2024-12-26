@@ -100,6 +100,7 @@ completed!
 
 对应代码文件**dp.py**<br>
 
+要改！！！
 
 
 # 六. 四叉树+morton码（老师课件-四叉树）
@@ -125,6 +126,7 @@ completed!
 还在理解中<br>
 学习html+css+javascript中<br>
 
+要改！！！
 
 # 八. 地图符号的绘制（老师课件-地图符号）（加分项）
 地图符号的几何特征<br>
@@ -140,4 +142,6 @@ completed!
 ③内部点扩散；射线法；扫描法；**边界代数法**<br>
 
 报错，报错，怎么老是报错T_T<br>
-对应文件**vector_to_raster.py**
+对应文件**vector_to_raster.py**<br>
+
+要改！！！
