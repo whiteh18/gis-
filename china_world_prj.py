@@ -1,3 +1,5 @@
+#--------------1.1 + 经纬度格网-----------------
+
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,18 +13,20 @@ lat_range = np.arange(15, 60, 5)
 lon_range = np.arange(70, 145, 5)
 
 for lat in lat_range:
-    plt.plot([70, 140], [lat, lat], color='gray', linestyle='-', linewidth=0.5)
+    plt.plot([70, 140], [lat, lat], color='gray', linestyle='--', linewidth=0.5)
 for lon in lon_range:
-    plt.plot([lon, lon], [15, 55], color='gray', linestyle='-', linewidth=0.5)
-# 设置轴标签，但是还是中文问题
-#ax.set_xlabel('经度')
-#ax.set_ylabel('纬度')
+    plt.plot([lon, lon], [15, 55], color='gray', linestyle='--', linewidth=0.5)
+# 设置轴标签
+ax.set_xlabel('Longitude')
+ax.set_ylabel('Latitude')
 # 显示图形
 # 绘制中国版图
 data.plot(ax=ax)
 plt.show()
 
 #-------------------------------------------------------分界线--------------------------------------------------------
+
+#---------------------1.2 + 经纬度格网-----------------------------
 
 import geopandas as gpd
 import numpy as np
@@ -43,7 +47,7 @@ a = 6378245  # 长半轴
 f = 1 / 298.3  # 扁率
 e = np.sqrt(f * (2 - f))  # 第一偏心率
 
-
+#根据投影变换的原理公式书写函数
 def lambert_conversion(lon, lat):
     # 将经纬度转换为弧度
     lat_rad = np.radians(lat)
@@ -53,21 +57,21 @@ def lambert_conversion(lon, lat):
     lat_0_rad = np.radians(lat_0)
     lon_0_rad = np.radians(lon_0)
 
-    # 计算常数
+    # 计算投影公式中的常数
     n = (np.sin(lat_1_rad) + np.sin(lat_2_rad)) / 2
     F = (np.cos(lat_1_rad) + np.cos(lat_2_rad)) / 2
     rho_0 = a * F / n
     rho = a * n / (1 + n * np.sin(lat_rad) / np.cos(lat_rad))
     theta = n * (lon_rad - lon_0_rad)
 
-    # 计算坐标
+    # 计算投影转换后的坐标
     x = rho * np.sin(theta)
     y = rho_0 - rho * np.cos(theta)
 
     return x, y
 
 
-# 转换数据的坐标
+# 转换china.shp数据的坐标
 new_coords = []
 for geom in data.geometry:
     new_geom_coords = []
@@ -76,7 +80,7 @@ for geom in data.geometry:
             lon, lat = point
             x, y = lambert_conversion(lon, lat)
             new_geom_coords.append((x, y))
-        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+        new_coords.append([new_geom_coords])  
     elif geom.geom_type == 'MultiPolygon':
         for poly in geom.geoms:
             new_poly_coords = []
@@ -102,7 +106,7 @@ fig, ax = plt.subplots(figsize=(10, 10))
 new_data.plot(ax=ax)
 
 # 添加经纬网格绘制
-# 获取数据的大致经纬度范围（假设数据覆盖了一定的范围，这里简单示意，可以根据实际更精确调整）
+# 获取数据的经纬度范围
 min_lon, min_lat, max_lon, max_lat = 70, 15, 140, 55
 lon_values = np.arange(min_lon, max_lon + 5, 5)  # 每隔5度生成经度值
 lat_values = np.arange(min_lat, max_lat + 5, 5)  # 每隔5度生成纬度值
@@ -147,15 +151,14 @@ data = gpd.read_file('china.shp')
 lon_0 = 0  # 中心经线
 lat_0 = 0  # 中心纬线
 
-# 参考椭球体相关参数（常用的地球参考椭球体参数，可根据实际需求调整）
-a = 6378137.0  # 长半轴（WGS84椭球体长半轴，可根据实际参考椭球更换）
-f = 1 / 298.257223563  # 扁率（WGS84椭球体扁率，可根据实际参考椭球更换）
+# 参考椭球体相关参数
+a = 6378137.0  # 长半轴 WGS84椭球体长半轴
+f = 1 / 298.257223563  # 扁率 WGS84椭球体扁率
 e = np.sqrt(f * (2 - f))  # 第一偏心率
 
+#定义投影函数
 def mercator_conversion(lon, lat):
-    """
-    将经纬度坐标转换为墨卡托投影坐标
-    """
+    #转为弧度
     lon_rad = np.radians(lon)
     lat_rad = np.radians(lat)
     lon_0_rad = np.radians(lon_0)
@@ -164,12 +167,12 @@ def mercator_conversion(lon, lat):
     # 计算墨卡托投影坐标的x轴坐标（经度方向）
     x = a * (lon_rad - lon_0_rad)
 
-    # 计算墨卡托投影坐标的y轴坐标（纬度方向），用到了正切函数和对数函数的变换
+    # 计算墨卡托投影坐标的y轴坐标（纬度方向）
     y = a * np.log(np.tan(np.pi / 4 + lat_rad / 2) * ((1 - e * np.sin(lat_rad)) / (1 + e * np.sin(lat_rad))) ** (e / 2))
 
     return x, y
 
-# 转换数据的坐标
+# 转换china.shp数据的坐标
 new_coords = []
 for geom in data.geometry:
     new_geom_coords = []
@@ -178,7 +181,7 @@ for geom in data.geometry:
             lon, lat = point
             x, y = mercator_conversion(lon, lat)
             new_geom_coords.append((x, y))
-        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+        new_coords.append([new_geom_coords])  
     elif geom.geom_type == 'MultiPolygon':
         for poly in geom.geoms:
             new_poly_coords = []
@@ -204,7 +207,7 @@ fig, ax = plt.subplots(figsize=(10, 10))
 new_data.plot(ax=ax)
 
 # 添加经纬网格绘制
-# 获取数据的大致经纬度范围（假设数据覆盖了一定的范围，这里简单示意，可以根据实际更精确调整）
+# 获取数据的经纬度范围
 min_lon, min_lat, max_lon, max_lat = 70, 15, 140, 55
 lon_values = np.arange(min_lon, max_lon + 5, 5)  # 每隔5度生成经度值
 lat_values = np.arange(min_lat, max_lat + 5, 5)  # 每隔5度生成纬度值
@@ -235,6 +238,7 @@ plt.ylabel('Y Coordinate')
 plt.show()
 
 #-------------------------------------------------------分界线--------------------------------------------------------
+#-----------------------2.1 + 经纬度格网-------------------------
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
@@ -245,28 +249,28 @@ data = gpd.read_file('world.shp')
 fig, ax = plt.subplots()
 
 # 绘制经纬网格
-lat_range = np.arange(-90, 91, 5)
-lon_range = np.arange(-180, 180, 5)
+lat_range = np.arange(-90, 95, 5)
+lon_range = np.arange(-180, 185, 5)
 
 for lat in lat_range:
     plt.plot([-180, 180], [lat, lat], color='gray', linestyle='-', linewidth=0.5)
 for lon in lon_range:
-    plt.plot([lon, lon], [-90, 91], color='gray', linestyle='-', linewidth=0.5)
+    plt.plot([lon, lon], [-90, 90], color='gray', linestyle='-', linewidth=0.5)
 # 设置轴标签
-#ax.set_xlabel('经度')
-#ax.set_ylabel('纬度')
+ax.set_xlabel('Longitude')
+ax.set_ylabel('Latitude')
 # 显示图形
 # 绘制中国版图
 data.plot(ax=ax)
 plt.show()
 
 #-------------------------------------------------------分界线--------------------------------------------------------
-
+#----------------------------------2.2 + 经纬度格网-------------------------
 import geopandas as gpd
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, MultiPolygon
-import cartopy.crs as ccrs
+#import cartopy.crs as ccrs
 
 # 读取北京54坐标系下的中国版图数据
 data = gpd.read_file('world.shp')
@@ -276,19 +280,19 @@ lon_0 = 0  # 中心经线
 lat_0 = 0  # 中心纬线
 
 def mercator_conversion(lon, lat):
-    valid_lat = np.clip(lat, -85, 85)  # 限制纬度范围在[-85°, 85°]
+    valid_lat = np.clip(lat, -85, 85)  # 限制纬度范围在[-85°, 85°] 因为tan的原因
     # 将经纬度转换为弧度
     lat_rad = np.radians(valid_lat)
     lon_rad = np.radians(lon)
     lon_0_rad = np.radians(lon_0)
 
-    # 计算坐标
+    # 计算投影后坐标
     x = lon_rad - lon_0_rad
     y = np.log(np.tan(np.pi / 4 + lat_rad / 2))
 
     return x, y
 
-# 转换数据的坐标
+# 转换world.shp数据的坐标
 new_coords = []
 for geom in data.geometry:
     new_geom_coords = []
@@ -297,7 +301,7 @@ for geom in data.geometry:
             lon, lat = point
             x, y = mercator_conversion(lon, lat)
             new_geom_coords.append((x, y))
-        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+        new_coords.append([new_geom_coords])  
     elif geom.geom_type == 'MultiPolygon':
         for poly in geom.geoms:
             new_poly_coords = []
@@ -317,20 +321,35 @@ for coords in new_coords:
         new_geometries.append(Polygon(coords[0]))
 
 new_data = gpd.GeoDataFrame(data.drop('geometry', axis=1), geometry=new_geometries)
-
 # 绘制转换后的地图
-# 创建墨卡托投影对象，用于后续绘图时设置坐标系
-proj = ccrs.Mercator()
-fig, ax = plt.subplots(figsize=(10, 10), subplot_kw={'projection': proj})
-new_data.plot(ax=ax, transform=ccrs.PlateCarree())  # 设置数据的原始坐标系为PlateCarree（经纬度坐标系）
+fig, ax = plt.subplots(figsize=(10, 10))
+new_data.plot(ax=ax)
 
-# 添加经纬网格绘制，设置每隔5度绘制一条线
-gl = ax.gridlines(crs=ccrs.PlateCarree(), draw_labels=True,
-                  linewidth=0.5, color='gray', alpha=0.5, linestyle='--')
-gl.xlocator = plt.FixedLocator(np.arange(-180, 180 + 5, 5))  # 设置经度刻度位置
-gl.ylocator = plt.FixedLocator(np.arange(-90, 90 + 5, 5))  # 设置纬度刻度位置
-gl.top_labels = False  # 关闭顶部的经纬度标签（可根据需求选择是否显示）
-gl.right_labels = False  # 关闭右侧的经纬度标签（可根据需求选择是否显示）
+# 添加经纬网格绘制
+# 获取数据的经纬度范围
+min_lon, min_lat, max_lon, max_lat = -180, -90, 180, 90
+lon_values = np.arange(min_lon, max_lon + 5, 5)  # 每隔5度生成经度值
+lat_values = np.arange(min_lat, max_lat + 5, 5)  # 每隔5度生成纬度值
+
+# 将经纬度转换为墨卡托投影坐标并绘制经线
+for lon in lon_values:
+    x_coords = []
+    y_coords = []
+    for lat in lat_values:
+        x, y = mercator_conversion(lon, lat)
+        x_coords.append(x)
+        y_coords.append(y)
+    ax.plot(x_coords, y_coords, color='gray', linestyle='--', linewidth=0.5)
+
+# 将经纬度转换为墨卡托投影坐标并绘制纬线
+for lat in lat_values:
+    x_coords = []
+    y_coords = []
+    for lon in lon_values:
+        x, y = mercator_conversion(lon, lat)
+        x_coords.append(x)
+        y_coords.append(y)
+    ax.plot(x_coords, y_coords, color='gray', linestyle='--', linewidth=0.5)
 
 plt.title('World Mercator Projection')
 plt.xlabel('X Coordinate')
@@ -339,6 +358,7 @@ plt.ylabel('Y Coordinate')
 plt.show()
 
 #-------------------------------------------------------分界线--------------------------------------------------------
+#------------------------------------2.3 + 经纬度格网--------------------------------
 
 import geopandas as gpd
 import numpy as np
@@ -355,12 +375,13 @@ lon_0 = 0  # 中心经线
 lat_0 = 0  # 中心纬线
 
 def mercator_conversion(lon, lat):
+    valid_lat = np.clip(lat, -85, 85)  # 限制纬度范围在[-85°, 85°] 因为tan的原因
     # 将经纬度转换为弧度
-    lat_rad = np.radians(lat)
+    lat_rad = np.radians(valid_lat)
     lon_rad = np.radians(lon)
     lon_0_rad = np.radians(lon_0)
 
-    # 计算坐标
+    # 计算投影后坐标
     x = lon_rad - lon_0_rad
     y = np.log(np.tan(np.pi / 4 + lat_rad / 2))
 
@@ -375,7 +396,7 @@ for geom in data.geometry:
             lon, lat = point
             x, y = mercator_conversion(lon, lat)
             new_geom_coords.append((x, y))
-        new_coords.append([new_geom_coords])  # Ensure it's a list of polygons
+        new_coords.append([new_geom_coords])  
     elif geom.geom_type == 'MultiPolygon':
         for poly in geom.geoms:
             new_poly_coords = []
@@ -395,8 +416,38 @@ for coords in new_coords:
         new_geometries.append(Polygon(coords[0]))
 
 new_data = gpd.GeoDataFrame(data.drop('geometry', axis=1), geometry=new_geometries)
+# 绘制转换后的地图
+fig, ax = plt.subplots(figsize=(10, 10))
+new_data.plot(ax=ax)
 
-# 定义北京和巴黎的经纬度（示例经纬度，可根据实际更精确的坐标调整）
+# 添加经纬网格绘制
+# 获取数据的经纬度范围
+min_lon, min_lat, max_lon, max_lat = -180, -90, 180, 90
+lon_values = np.arange(min_lon, max_lon + 5, 5)  # 每隔5度生成经度值
+lat_values = np.arange(min_lat, max_lat + 5, 5)  # 每隔5度生成纬度值
+
+# 将经纬度转换为墨卡托投影坐标并绘制经线
+for lon in lon_values:
+    x_coords = []
+    y_coords = []
+    for lat in lat_values:
+        x, y = mercator_conversion(lon, lat)
+        x_coords.append(x)
+        y_coords.append(y)
+    ax.plot(x_coords, y_coords, color='gray', linestyle='--', linewidth=0.5)
+
+# 将经纬度转换为墨卡托投影坐标并绘制纬线
+for lat in lat_values:
+    x_coords = []
+    y_coords = []
+    for lon in lon_values:
+        x, y = mercator_conversion(lon, lat)
+        x_coords.append(x)
+        y_coords.append(y)
+    ax.plot(x_coords, y_coords, color='gray', linestyle='--', linewidth=0.5)
+
+
+# 北京和巴黎的经纬度
 beijing_lat = 39.9333  # 北纬39°56′，转换为小数形式
 beijing_lon = 116.3833  # 东经116°20′，转换为小数形式
 paris_lat = 48.85  # 北纬48°51′，转换为小数形式
@@ -413,7 +464,7 @@ paris_lon_rad = np.radians(paris_lon)
 sigma = np.arccos(np.sin(beijing_lat_rad) * np.sin(paris_lat_rad) +
                   np.cos(beijing_lat_rad) * np.cos(paris_lat_rad) * np.cos(paris_lon_rad - beijing_lon_rad))
 
-# 设定路径点数量（这里取100个点，可根据需要调整）
+# 设定路径点数量
 num_points = 100
 path_points = []
 for i in range(num_points):
@@ -430,9 +481,6 @@ for i in range(num_points):
 # 转换大圆航线路径点的坐标到墨卡托投影坐标系
 path_points_projected = [mercator_conversion(lon, lat) for lon, lat in path_points]
 
-# 绘制转换后的地图
-fig, ax = plt.subplots(figsize=(10, 10))
-new_data.plot(ax=ax)
 
 # 绘制大圆航线
 x_path, y_path = zip(*path_points_projected)
