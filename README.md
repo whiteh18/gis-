@@ -29,7 +29,7 @@
 不过如果不需要显示在影像地图上，ipyleaflet.GeoJSON便足够了<br>
 参考文件**name_prj.py**<br>
 
-(不过也可以直接在https://geojson.io/#map=2/0/20网站中输入JSON文件，可以在线在地图上显示姓名）<br>
+(不过也可以直接在https://geojson.io/#map=2/0/20 网站中输入JSON文件，可以在线在地图上显示姓名）<br>
 
 completed!
 
