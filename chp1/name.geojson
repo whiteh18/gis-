@@ -1,0 +1,43 @@
+{
+    "type" : "FeatureCollection",
+    "name" : "my_name",
+    "features" : [
+        {
+            "type" : "Feature",
+            "properties" : {
+                "name" : "贝"
+            },
+            "geometry" : {
+                "type" : "MultiLineString",
+                "coordinates" : [
+                [[4.75,4.25],[4.75,6.75],[11.25,6.75],[11.25,4.25]],
+                [[8,5.5],[7.75,4],[7,3.5],[6,3],[5,2.5],[3.5,2]],
+                [[7.75,4],[12.75,2.25]]]
+            }
+        },
+        {
+            "type" : "Feature",
+            "properties" : {
+                "name" : "二"
+            },
+            "geometry" : {
+                "type" : "MultiLineString",
+                "coordinates" : [
+                [[28,8.5],[30.75,8.5],[32.75,8.5]],
+                [[28,3.75],[30.75,3.75],[32.75,3.75]]]
+            }
+        },
+        {
+            "type" : "Feature",
+            "properties" : {
+                "name" : "儿"
+            },
+            "geometry" : {
+                "type" : "MultiLineString",
+                "coordinates" : [
+                [[42.25,3],[43.25,4],[44,5.75],[44.25,7.75],[44.25,11.75]],
+                [[49,11.75],[49,3.5],[51.25,3.5],[51.5,5],[51.75,6]]]
+            }
+        }
+    ]
+}
