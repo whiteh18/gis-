@@ -1,0 +1,34 @@
+原始的转换的html代码来源于Jan-Oliver Wagner <jan@intevation.de>。
+
+n老师在此基础上，不知道有没有改某些内容（源代码网址已经失效了）。
+
+压缩包中包括适合Windows系统的格式转换可执行文件，用于'converting Esri Generate format to shapefile'。
+（不知道能不能分享，需要先问问老师）
+
+Usage:
+gen2shp output {points|lines|polygons} < input
+where output and input are paths to the output shapefile filename (without .shp extension) and the input generate file.
+For example:
+gen2shp.exe pnttest points < pnttest.gen
+or
+gen2shp.exe arctest lines < arctest.gen
+or
+gen2shp.exe plytest polygons < plytest.gen
+
+翻译一下就是：
+gen2shp 输出 {点|线|多边形} < 输入
+其中输出和输入是输出shapefile文件名（不带.shp扩展名）的路径，以及输入生成文件。
+例如：
+gen2shp.exe pnttest points < pnttest.gen
+或
+gen2shp.exe arctest lines < arctest.gen
+或
+gen2shp.exe plytest polygons < plytest.gen
+
+记录一下使用方法：
+（1）解压压缩包，赋值bin文件夹的地址
+（2）win + R打开运行，输入cmd
+（3）cd 刚刚复制的地址（记得去掉引号），回车
+（3）按下面的格式输入命令：
+"gen2shp.exe 输出的文件名（不带后缀）points/lines/polygons（依据gen文件内容） < gen文件路径"
+（4）转换后的文件位于bin中，建议剪切到其他地方
