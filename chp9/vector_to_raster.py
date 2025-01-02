@@ -8,25 +8,25 @@ import numpy as np
 
 #读取矢量点数据
 try:
-    points = gpd.read_file('./shp_file/points.shp')
+    points = gpd.read_file('./shp/point.shp')
 except Exception as e:
     print(f"读取矢量数据失败：{e}")
     exit()
 
 #定义栅格参数
-pixel_size = 10
+pixel_size = 1
 bounds = points.total_bounds
 #最左边的x坐标和最上边的y坐标
 origin_x,origin_y = bounds[0],bounds[3]
 #栅格的宽度和高度
-width = int((bounds[2] - bounds[0]) / pixel_size)
-height = int((bounds[3] - bounds[1]) / pixel_size)
+width = int((bounds[2] - bounds[0]) / pixel_size) + 1
+height = int((bounds[3] - bounds[1]) / pixel_size) + 1
 #创建一个空栅格数组
 raster = np.zeros((height, width), dtype=np.uint8)
 #计算行列号并赋值
 def coord_to_row_col(x,y,origin_x,origin_y,pixel_size):
-    col = int((x - origin_x) / pixel_size) #+ 1
-    row = int((origin_y - y) / pixel_size) #+ 1
+    col = int((x - origin_x) / pixel_size) 
+    row = int((origin_y - y) / pixel_size) 
     return row,col
 for index,point in points.iterrows():
     x,y = point.geometry.x,point.geometry.y
@@ -39,7 +39,7 @@ for index,point in points.iterrows():
 transform = rasterio.transform.from_origin(origin_x, origin_y, pixel_size, pixel_size)
 #保存栅格数据到文件
 try:
-    with rasterio.open('points.tif', 'w', driver='GTiff',
+    with rasterio.open('point.tif', 'w', driver='GTiff',
                    height=height, width=width, count=1, dtype=raster.dtype,
                    crs=points.crs, transform=transform) as dst:
         dst.write(raster, 1)
@@ -47,7 +47,7 @@ try:
 except Exception as e:
     print(f"保存栅格文件失败：{e}")
 
-#----------------------------------线转栅格1----------------------------------------------
+#----------------------------------线转栅格1(八方向栅格化)----------------------------------------------
 
 import numpy as np
 import geopandas as gpd
@@ -64,15 +64,15 @@ def rasterize_line(points, pixel_size):
     # 确定行和列的范围
     bounds = points.total_bounds
     origin_x, origin_y = bounds[0], bounds[3]
-    width = int((bounds[2] - bounds[0]) / pixel_size)
-    height = int((bounds[3] - bounds[1]) / pixel_size)
+    width = int((bounds[2] - bounds[0]) / pixel_size) + 1
+    height = int((bounds[3] - bounds[1]) / pixel_size) + 1
     
     # 创建一个空栅格数组
     raster = np.zeros((height, width), dtype=np.uint8)
     
     for index, line in points.iterrows():
         x1, y1 = line.geometry.coords[0]  # 线段的起点
-        x2, y2 = line.geometry.coords[1]  # 线段的终点
+        x2, y2 = line.geometry.coords[-1]  # 线段的终点
         
         i1, j1 = coord_to_row_col(x1, y1, origin_x, origin_y, pixel_size)
         i2, j2 = coord_to_row_col(x2, y2, origin_x, origin_y, pixel_size)
@@ -88,6 +88,7 @@ def rasterize_line(points, pixel_size):
         col_diff = abs(j2 - j1)
 
         if row_diff > col_diff:
+            # 当行数大于列数
             # 按行划分
             for i in range(min(i1, i2), max(i1, i2) + 1):
                 # 计算当前行的列坐标
@@ -103,6 +104,7 @@ def rasterize_line(points, pixel_size):
                     if 0 <= i < height and 0 <= j < width:
                         raster[i, j] = 1
         else:
+            # 当列数大于行数
             # 按列划分
             for j in range(min(j1, j2), max(j1, j2) + 1):
                 # 计算当前列的行坐标
@@ -122,7 +124,7 @@ def rasterize_line(points, pixel_size):
 
 
 try:
-    lines = gpd.read_file('./shp_file/Pybuild1.shp')
+    lines = gpd.read_file('./shp/line.shp')
 except Exception as e:
     print(f"读取矢量数据失败: {e}")
     exit()
@@ -134,187 +136,228 @@ pixel_size = 10
 raster_data = rasterize_line(lines, pixel_size)
 
 # 保存栅格数据到文件
-transform = rasterio.transform.from_origin(0, lines.total_bounds[3], pixel_size, pixel_size)
+transform = rasterio.transform.from_origin(line.total_bounds[0], lines.total_bounds[3], pixel_size, pixel_size)
 try:
-    with rasterio.open('Pybuild1.tif', 'w', driver='GTiff',
+    with rasterio.open('line.tif', 'w', driver='GTiff',
                        height=raster_data.shape[0], width=raster_data.shape[1], count=1, dtype=raster_data.dtype,
                        crs=lines.crs, transform=transform) as dst:
         dst.write(raster_data, 1)
-        print("线段栅格文件已成功生成！")
+        print("线栅格文件已成功生成！")
 except Exception as e:
     print(f"保存栅格文件失败: {e}")
-#-----------------------------------线转栅格2-----------------------------------------
+#-----------------------------------线转栅格2（全路径栅格化）-----------------------------------------
 
-import geopandas as gpd
 import numpy as np
-import rasterio
-from rasterio.features import rasterize
-from shapely.geometry import LineString
-
-def vector_to_raster(vector_path, raster_path, pixel_size):
-    # 读取矢量线数据
-    gdf = gpd.read_file(vector_path)
-    
-    # 获取线的边界
-    bounds = gdf.total_bounds
-    min_x, min_y, max_x, max_y = bounds
-
-    # 计算栅格的宽和高
-    width = int((max_x - min_x) / pixel_size) + 1
-    height = int((max_y - min_y) / pixel_size) + 1
-
-    # 创建一个空栅格，值为0（背景）
-    raster = np.zeros((height, width), dtype=np.uint8)
-
-    # 将线段转化为栅格
-    for geom in gdf.geometry:
-        if isinstance(geom, LineString):
-            # 获取线段的坐标
-            x_coords, y_coords = geom.xy
-
-            # 遍历线段上的每个点
-            for i in range(len(x_coords) - 1):
-                start = (x_coords[i], y_coords[i])
-                end = (x_coords[i + 1], y_coords[i + 1])
-                
-                # 获取线段在栅格中的起点和终点索引
-                start_row = int((max_y - start[1]) / pixel_size)
-                start_col = int((start[0] - min_x) / pixel_size)
-                end_row = int((max_y - end[1]) / pixel_size)
-                end_col = int((end[0] - min_x) / pixel_size)
-
-                # 使用 Bresenham 算法进行栅格化
-                rasterize_line(raster, start_row, start_col, end_row, end_col)
-
-    # 定义转化为栅格的变换
-    transform = rasterio.transform.from_bounds(min_x, min_y, max_x, max_y, raster.shape[1], raster.shape[0])
-
-    # 写入栅格文件
-    with rasterio.open(raster_path, 'w', driver='GTiff', height=raster.shape[0], width=raster.shape[1],
-                       count=1, dtype='uint8', crs=gdf.crs, transform=transform) as dst:
-        dst.write(raster, 1)
-
-def rasterize_line(raster, start_row, start_col, end_row, end_col):
-    """实现 Bresenham 算法来填充线段的路径"""
-    dx = end_col - start_col
-    dy = end_row - start_row
-    sx = 1 if dx > 0 else -1
-    sy = 1 if dy > 0 else -1
-    dx = abs(dx)
-    dy = abs(dy)
-
-    if dx > dy:
-        err = dx / 2.0
-        while start_col != end_col:
-            if 0 <= start_row < raster.shape[0] and 0 <= start_col < raster.shape[1]:
-                raster[start_row, start_col] = 1  # 填充当前点
-            err -= dy
-            if err < 0:
-                start_row += sy
-                err += dx
-            start_col += sx
-    else:
-        err = dy / 2.0
-        while start_row != end_row:
-            if 0 <= start_row < raster.shape[0] and 0 <= start_col < raster.shape[1]:
-                raster[start_row, start_col] = 1  # 填充当前点
-            err -= dx
-            if err < 0:
-                start_col += sx
-                err += dy
-            start_row += sy
-
-# 使用示例
-vector_file_path = './shp_file/sh_prj6.shp'  
-raster_file_path = './raster_file/sh_prj6.tif'  
-pixel_size = 10  # 设置栅格的像素大小
-
-vector_to_raster(vector_file_path, raster_file_path, pixel_size)
-#-------------------------------------面转栅格---------------------------------------------
-#不对不对 非常不对
 import geopandas as gpd
-import numpy as np
 import rasterio
-from shapely.geometry import Polygon
 
-def boundary_fill_raster(vector_path, raster_path, pixel_size, a):
-    # 读取矢量多边形数据
-    gdf = gpd.read_file(vector_path)
-
-    # 获取多边形的总边界
-    boundaries = gdf.boundary
-    if boundaries.is_empty.any():
-        raise ValueError("The provided geometries have no boundaries.")
-
-    # 计算栅格的边界
-    min_x, min_y, max_x, max_y = boundaries.total_bounds
-
-    # 计算栅格的宽和高
-    width = int((max_x - min_x) / pixel_size) + 1
-    height = int((max_y - min_y) / pixel_size) + 1
-
-    # 初始化栅格_array，值为0
-    raster_array = np.zeros((height, width), dtype=np.int32)
-
-    # 将边界坐标转换为行列索引
-    def to_indices(x, y):
-        col = int((x - min_x) / pixel_size)
-        row = int((max_y - y) / pixel_size)
+# 定义栅格化函数
+def rasterize_line(points, pixel_size):
+    # 获取点的行列坐标
+    def coord_to_row_col(x, y, origin_x, origin_y, pixel_size):
+        row = int((origin_y - y) / pixel_size)
+        col = int((x - origin_x) / pixel_size)
         return row, col
+    
+    # 确定行和列的范围
+    bounds = points.total_bounds
+    origin_x, origin_y = bounds[0], bounds[3]
+    width = int((bounds[2] - bounds[0]) / pixel_size) + 1
+    height = int((bounds[3] - bounds[1]) / pixel_size) + 1
+    
+    # 创建一个空栅格数组
+    raster = np.zeros((height, width), dtype=np.uint8)
+    
+    for index, line in points.iterrows():
+        x1, y1 = line.geometry.coords[0]  # 线段的起点
+        x2, y2 = line.geometry.coords[-1]  # 线段的终点
+        
+        i1, j1 = coord_to_row_col(x1, y1, origin_x, origin_y, pixel_size)
+        i2, j2 = coord_to_row_col(x2, y2, origin_x, origin_y, pixel_size)
+        
+        # 将端点涂黑
+        if 0 <= i1 < height and 0 <= j1 < width:
+            raster[i1, j1 ] = 1
+        if 0 <= i2 < height and 0 <= j2 < width:
+            raster[i2, j2 ] = 1
 
-    # 遍历每个多边形
-    for polygon in gdf.geometry:
-        if isinstance(polygon, Polygon):
-            exterior_coords = np.array(polygon.exterior.coords)
+        # 计算行数差和列数差
+        row_diff = abs(i2 - i1)
+        col_diff = abs(j2 - j1)
 
-            # 处理多边形的边界
-            for i in range(len(exterior_coords) - 1):
-                start = exterior_coords[i]
-                end = exterior_coords[i + 1]
+        if row_diff > col_diff:
+            ix = i1
+            # 当行数大于列数
+            # 按行分带，计算行号
+            for i in range(min(i1, i2), max(i1, i2) + 1):
+                if y2 > y1:
+                    x1,y1,x2,y2 = x2,y2,x1,y1  # 交换起点终点
+                if j1 == j2:
+                    j = j1  # 纵坐标相同，直接用j1或j2
+                    if 0 <= i < height and 0 <= j < width:
+                        raster[i, j ] = 1
+                else:
+                    # 计算该列的起末和该直线交点的行号
+                    k = (y2 - y1) / (x2 - x1)
+                    for j in range(min(j1,j2), max(j1,j2) + 1):
+                        
+                        ia = int((-(j - 1) * pixel_size + (x1 - origin_x)) * k + (- y1 + origin_y) / pixel_size) 
+                        ie = int((- j * pixel_size + (x1 - origin_x)) * k + (- y1 + origin_y) / pixel_size) 
+                        if 0 <= j < width and 0 <= ia < height and 0 <= ie < height:
+                            raster[ia - 1:ie + 1, j] = 1
+                        if i == i1 if i1 < i2 else i2:
+                            ix = ia if ia < ie else ie
+            raster[ix,j1] = 1
 
-                start_row, start_col = to_indices(*start)
-                end_row, end_col = to_indices(*end)
+        else:
+            # 当列数大于行数
+            # 按列分带 计算各个行起始列号和结尾列号
+            jx = j1
+            for j in range(min(j1, j2), max(j1, j2) + 1):
+                if y2 > y1:
+                    x1,y1,x2,y2 = x2,y2,x1,y1  # 交换起点终点
 
-                if start_row == end_row:  # 同一行
-                    if end_col > start_col:  # 从左向右
-                        for col in range(start_col, end_col + 1):
-                            raster_array[start_row, col] += a
-                    else:  # 从右向左
-                        for col in range(end_col, start_col + 1):
-                            raster_array[start_row, col] -= a
+                if i1 == i2:
+                    i = i1  # 横坐标相同，直接用i1或i2
+                    if 0 <= i < height and 0 <= j < width:
+                        raster[i, j ] = 1
+                else:
+                    k = (y2 - y1) / (x2 - x1)  # 斜率
+                    for i in range(min(i1,i2), max(i1,i2) + 1):
+                        ja = int(((origin_y - (i -1) * pixel_size - y1) / k + x1 - origin_x) / pixel_size) - 1
+                        je = int(((origin_y - i * pixel_size - y1) / k + x1 - origin_x) / pixel_size) - 1
+                        
+                        if 0 <= i < height and 0 <= ja < width and 0 <= je < width:
+                            if ja < je:
+                                raster[i, ja - 1:je + 1] = 1
+                            else:
+                                raster[i, je - 1:ja + 1] = 1
+                        if i == i1 if i1 < i2 else i2:
+                            jx = ja if ja < je else je
+            raster[i1,jx] = 1
+    
+    return raster
 
-                else:  # 不在同一行
-                    # 采用简单的线性插值来确定直线走向
-                    dx = end_col - start_col
-                    dy = end_row - start_row
-                    steps = max(abs(dx), abs(dy))
 
-                    x_inc = dx / steps
-                    y_inc = dy / steps
+try:
+    lines = gpd.read_file('./shp/line.shp')
+except Exception as e:
+    print(f"读取矢量数据失败: {e}")
+    exit()
 
-                    x, y = start_col, start_row
-                    for _ in range(steps + 1):
-                        row_idx, col_idx = to_indices(x, y)
-                        if row_idx >= 0 and row_idx < height and col_idx >= 0 and col_idx < width:
-                            if dy >= 0:  # 下行，左侧加a
-                                raster_array[row_idx, col_idx] += a
-                            else:  # 上行，左侧减a
-                                raster_array[row_idx, col_idx] -= a
+# 定义栅格参数
+pixel_size = 1
 
-                        x += x_inc
-                        y += y_inc
+# 调用栅格化函数
+raster_data = rasterize_line(lines, pixel_size)
 
-    # 处理栅格数据保存
-    transform = rasterio.transform.from_bounds(min_x, min_y, max_x, max_y, width, height)
-    with rasterio.open(raster_path, 'w', driver='GTiff', height=raster_array.shape[0],
-                       width=raster_array.shape[1], count=1, dtype='int32',
-                       crs=gdf.crs, transform=transform) as dst:
-        dst.write(raster_array, 1)
+# 保存栅格数据到文件
+transform = rasterio.transform.from_origin(lines.total_bounds[0],lines.total_bounds[3], pixel_size, pixel_size)
+try:
+    with rasterio.open('line2.tif', 'w', driver='GTiff',
+                       height=raster_data.shape[0], width=raster_data.shape[1], count=1, dtype=raster_data.dtype,
+                       crs=lines.crs, transform=transform) as dst:
+        dst.write(raster_data, 1)
+        print("线栅格文件已成功生成！")
+except Exception as e:
+    print(f"保存栅格文件失败: {e}")
+#-------------------------------------面转栅格---------------------------------------------
 
-# 使用示例
-vector_file_path = './polygon_file.shp'  
-raster_file_path = 'output_raster.tif'  
-pixel_size = 10  # 设置栅格的像素大小
-a = 1  # 边界加权值
+import numpy as np
+import geopandas as gpd
+import rasterio
 
-boundary_fill_raster(vector_file_path, raster_file_path, pixel_size, a)
+# 坐标转换函数，将地理坐标转成行、列坐标
+def geo_to_grid_coord(x, y, origin_x, origin_y, pixel_size):
+    row = int((origin_y - y) / pixel_size)
+    col = int((x - origin_x) / pixel_size)
+    return row, col
+
+# 边界代数法实现矢量面转栅格面
+def vector_polygon_to_raster(polygons, pixel_size):
+    bounds = polygons.total_bounds
+    origin_x = bounds[0]
+    origin_y = bounds[3]
+    width = int((bounds[2] - bounds[0]) / pixel_size) + 1
+    height = int((bounds[3] - bounds[1]) / pixel_size) + 1
+
+    raster = np.zeros((height, width), dtype=np.int32)
+
+    for index, polygon in polygons.iterrows():
+        exterior_ring = polygon.geometry.exterior.coords
+        num_vertices = len(exterior_ring)
+
+        for i in range(num_vertices - 1):
+            x1, y1 = exterior_ring[i]
+            x2, y2 = exterior_ring[i + 1]
+
+            row1, col1 = geo_to_grid_coord(x1, y1, origin_x, origin_y, pixel_size)
+            row2, col2 = geo_to_grid_coord(x2, y2, origin_x, origin_y, pixel_size)
+
+            # 确保行列索引大于零
+            if not (0 <= row1 < height and 0 <= col1 < width and 0 <= row2 < height and 0 <= col2 < width):
+                continue  # 如果坐标超出范围则跳过
+
+            y_diff = abs(row2 - row1)
+            x_diff = abs(col2 - col1)
+            steep = y_diff > x_diff
+
+            if steep:
+                # 沿 y 方向绘制
+                if row1 > row2:
+                    row1, row2 = row2, row1
+                    col1, col2 = col2, col1
+                dx = col2 - col1
+                dy = row2 - row1
+                derr = abs(dy) * 2
+                error = 0
+                col = col1
+
+                for row in range(row1, row2 + 1):
+                    if 0 <= row < height and 0 <= col < width:
+                        raster[row, col] = 1
+                    error += derr
+                    if error > dx:
+                        col += 1 if col1 < col2 else -1  # 确保列的更新方向
+                        error -= dx * 2
+            else:
+                # 沿 x 方向绘制
+                if col1 > col2:
+                    row1, row2 = row2, row1
+                    col1, col2 = col2, col1
+                dx = col2 - col1
+                dy = row2 - row1
+                derr = abs(dy) * 2
+                error = 0
+                row = row1
+
+                for col in range(col1, col2 + 1):
+                    if 0 <= row < height and 0 <= col < width:
+                        raster[row, col] = 1
+                    error += derr
+                    if error > dx:
+                        row += 1 if row1 < row2 else -1  # 确保行的更新方向
+                        error -= dx * 2
+
+    return raster
+
+
+try:
+    polygons = gpd.read_file('./shp/polygon.shp')
+except Exception as e:
+    print(f"读取矢量数据失败: {e}")
+    exit()
+
+pixel_size = 1
+raster_data = vector_polygon_to_raster(polygons, pixel_size)
+
+# 保存栅格数据到文件
+transform = rasterio.transform.from_origin(polygons.total_bounds[0], polygons.total_bounds[3], pixel_size, pixel_size)
+try:
+    with rasterio.open('polygon2.tif', 'w', driver='GTiff',
+                       height=raster_data.shape[0], width=raster_data.shape[1], count=1, dtype=raster_data.dtype,
+                       crs=polygons.crs, transform=transform) as dst:
+        dst.write(raster_data, 1)
+        print("栅格面文件已成功生成！")
+except Exception as e:
+    print(f"保存栅格文件失败: {e}")
